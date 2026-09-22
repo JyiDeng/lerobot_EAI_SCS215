@@ -46,28 +46,21 @@ class SOFollower(Robot):
     def __init__(self, config: SOFollowerRobotConfig):
         super().__init__(config)
         self.config = config
-        # SCS215 has a 300-degree, 1024-step range. Use normalized values instead of
-        # the STS3215-specific degree conversion, which assumes 360 degrees and 4096 steps.
-        norm_mode_body = MotorNormMode.RANGE_M100_100
+        # choose normalization mode depending on config if available
+        norm_mode_body = MotorNormMode.DEGREES if config.use_degrees else MotorNormMode.RANGE_M100_100
         self.bus = FeetechMotorsBus(
             port=self.config.port,
             motors={
-                "shoulder_pan": Motor(1, "scs215", norm_mode_body),
-                "shoulder_lift": Motor(2, "scs215", norm_mode_body),
-                "elbow_flex": Motor(3, "scs215", norm_mode_body),
-                "wrist_flex": Motor(4, "scs215", norm_mode_body),
-                "wrist_roll": Motor(5, "scs215", norm_mode_body),
-                "gripper": Motor(6, "scs215", MotorNormMode.RANGE_0_100),
+                "shoulder_pan": Motor(1, "sts3215", norm_mode_body),
+                "shoulder_lift": Motor(2, "sts3215", norm_mode_body),
+                "elbow_flex": Motor(3, "sts3215", norm_mode_body),
+                "wrist_flex": Motor(4, "sts3215", norm_mode_body),
+                "wrist_roll": Motor(5, "sts3215", norm_mode_body),
+                "gripper": Motor(6, "sts3215", MotorNormMode.RANGE_0_100),
             },
             calibration=self.calibration,
-            protocol_version=1,
         )
         self.cameras = make_cameras_from_configs(config.cameras)
-
-    def _read_positions(self) -> dict[str, float]:
-        """Read motor positions with the access method supported by the bus protocol."""
-        # Feetech SCS protocol 1 does not support GroupSyncRead.
-        return {motor: self.bus.read("Present_Position", motor) for motor in self.bus.motors}
 
     @property
     def _motors_ft(self) -> dict[str, type]:
@@ -133,9 +126,7 @@ class SOFollower(Robot):
         logger.info(f"\nRunning calibration of {self}")
         self.bus.disable_torque()
         for motor in self.bus.motors:
-            # Operating_Mode is an STS/SMS register and is not present in the SCS215 table.
-            if self.bus.protocol_version == 0:
-                self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
+            self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
         input(f"Move {self} to the middle of its range of motion and press ENTER....")
         homing_offsets = self.bus.set_half_turn_homings()
@@ -149,8 +140,7 @@ class SOFollower(Robot):
         )
         range_mins, range_maxes = self.bus.record_ranges_of_motion(unknown_range_motors)
         range_mins[full_turn_motor] = 0
-        model = self.bus.motors[full_turn_motor].model
-        range_maxes[full_turn_motor] = self.bus.model_resolution_table[model] - 1
+        range_maxes[full_turn_motor] = 4095
 
         self.calibration = {}
         for motor, m in self.bus.motors.items():
@@ -170,17 +160,15 @@ class SOFollower(Robot):
         with self.bus.torque_disabled():
             self.bus.configure_motors()
             for motor in self.bus.motors:
-                if self.bus.protocol_version == 0:
-                    self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
+                self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
                 self.bus.write("P_Coefficient", motor, self.config.position_p_coefficient)
                 self.bus.write("I_Coefficient", motor, self.config.position_i_coefficient)
                 self.bus.write("D_Coefficient", motor, self.config.position_d_coefficient)
 
                 if motor == "gripper":
                     self.bus.write("Max_Torque_Limit", motor, 500)  # 50% of max torque to avoid burnout
-                    if self.bus.protocol_version == 0:
-                        self.bus.write("Protection_Current", motor, 250)  # 50% of max current to avoid burnout
-                        self.bus.write("Overload_Torque", motor, 25)  # 25% torque when overloaded
+                    self.bus.write("Protection_Current", motor, 250)  # 50% of max current to avoid burnout
+                    self.bus.write("Overload_Torque", motor, 25)  # 25% torque when overloaded
 
     def setup_motors(self) -> None:
         for motor in reversed(self.bus.motors):
@@ -192,7 +180,7 @@ class SOFollower(Robot):
     def get_observation(self) -> RobotObservation:
         # Read arm position
         start = time.perf_counter()
-        obs_dict = self._read_positions()
+        obs_dict = self.bus.sync_read("Present_Position", num_retry=self.config.num_read_retries)
         obs_dict = {f"{motor}.pos": val for motor, val in obs_dict.items()}
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read state: {dt_ms:.1f}ms")
@@ -233,7 +221,7 @@ class SOFollower(Robot):
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:
-            present_pos = self._read_positions()
+            present_pos = self.bus.sync_read("Present_Position", num_retry=self.config.num_read_retries)
             goal_present_pos = {key: (g_pos, present_pos[key]) for key, g_pos in goal_pos.items()}
             goal_pos = ensure_safe_goal_position(goal_present_pos, self.config.max_relative_target)
 

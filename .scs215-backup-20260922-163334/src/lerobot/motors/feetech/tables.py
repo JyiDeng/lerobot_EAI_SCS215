@@ -127,7 +127,6 @@ SCS_SERIES_CONTROL_TABLE = {
     "CCW_Dead_Zone": (27, 1),
     "Protective_Torque": (37, 1),
     "Protection_Time": (38, 1),
-    "Overload_Torque": (39, 1),
     # SRAM
     "Torque_Enable": (40, 1),
     "Acceleration": (41, 1),
@@ -181,8 +180,6 @@ MODEL_CONTROL_TABLE = {
     "sts3215": STS_SMS_SERIES_CONTROL_TABLE,
     "sts3250": STS_SMS_SERIES_CONTROL_TABLE,
     "scs0009": SCS_SERIES_CONTROL_TABLE,
-    # Feetech SCS215 uses the SCS protocol and the SCS control table.
-    "scs215": SCS_SERIES_CONTROL_TABLE,
     "sm8512bl": STS_SMS_SERIES_CONTROL_TABLE,
 }
 
@@ -194,7 +191,6 @@ MODEL_RESOLUTION = {
     "sts3250": 4096,
     "sm8512bl": 4096,
     "scs0009": 1024,
-    "scs215": 1024,
 }
 
 MODEL_BAUDRATE_TABLE = {
@@ -205,7 +201,6 @@ MODEL_BAUDRATE_TABLE = {
     "sts3215": STS_SMS_SERIES_BAUDRATE_TABLE,
     "sts3250": STS_SMS_SERIES_BAUDRATE_TABLE,
     "scs0009": SCS_SERIES_BAUDRATE_TABLE,
-    "scs215": SCS_SERIES_BAUDRATE_TABLE,
 }
 
 # Sign-Magnitude encoding bits
@@ -228,7 +223,6 @@ MODEL_ENCODING_TABLE = {
     "sts3250": STS_SMS_SERIES_ENCODINGS_TABLE,
     "sm8512bl": STS_SMS_SERIES_ENCODINGS_TABLE,
     "scs0009": {},
-    "scs215": {},
 }
 
 SCAN_BAUDRATES = [
@@ -250,8 +244,6 @@ MODEL_NUMBER_TABLE = {
     "sts3250": 2825,
     "sm8512bl": 11272,
     "scs0009": 1284,
-    # The connected SCS215 reports model number 1315 under SCS protocol 1.
-    "scs215": 1315,
 }
 
 MODEL_PROTOCOL = {
@@ -262,5 +254,4 @@ MODEL_PROTOCOL = {
     "sts3250": 0,
     "sm8512bl": 0,
     "scs0009": 1,
-    "scs215": 1,
 }

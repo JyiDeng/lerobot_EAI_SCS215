@@ -788,11 +788,6 @@ class SerialMotorsBus(MotorsBusBase):
         """
         motor_names = self._get_motors_list(motors)
 
-        # SCS protocol 1 motors do not expose Homing_Offset and do not support
-        # GroupSyncRead. Keep zero offsets and read positions one motor at a time.
-        if getattr(self, "protocol_version", 0) == 1:
-            return {motor: 0 for motor in motor_names}
-
         self.reset_calibration(motor_names)
         actual_positions = self.sync_read("Present_Position", motor_names, normalize=False)
         homing_offsets = self._get_half_turn_homings(actual_positions)
@@ -824,21 +819,13 @@ class SerialMotorsBus(MotorsBusBase):
         """
         motor_names = self._get_motors_list(motors)
 
-        def read_positions() -> dict[str, Value]:
-            if getattr(self, "protocol_version", 0) == 1:
-                return {
-                    motor: self.read("Present_Position", motor, normalize=False, num_retry=5)
-                    for motor in motor_names
-                }
-            return self.sync_read("Present_Position", motor_names, normalize=False, num_retry=5)
-
-        start_positions = read_positions()
+        start_positions = self.sync_read("Present_Position", motor_names, normalize=False, num_retry=5)
         mins = start_positions.copy()
         maxes = start_positions.copy()
 
         user_pressed_enter = False
         while not user_pressed_enter:
-            positions = read_positions()
+            positions = self.sync_read("Present_Position", motor_names, normalize=False, num_retry=5)
             mins = {motor: min(positions[motor], min_) for motor, min_ in mins.items()}
             maxes = {motor: max(positions[motor], max_) for motor, max_ in maxes.items()}
 

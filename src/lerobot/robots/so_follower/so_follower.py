@@ -173,7 +173,9 @@ class SOFollower(Robot):
                 if self.bus.protocol_version == 0:
                     self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
                 self.bus.write("P_Coefficient", motor, self.config.position_p_coefficient)
-                self.bus.write("I_Coefficient", motor, self.config.position_i_coefficient)
+                # The current SCS215 manual leaves address 23 undefined.
+                if self.bus.motors[motor].model != "scs215":
+                    self.bus.write("I_Coefficient", motor, self.config.position_i_coefficient)
                 self.bus.write("D_Coefficient", motor, self.config.position_d_coefficient)
 
                 if motor == "gripper":

@@ -152,6 +152,14 @@ SCS_SERIES_CONTROL_TABLE = {
     "Acceleration_2": (83, 1),  # don't know what that is
 }
 
+# The current SCS215 manual leaves addresses 7, 23, and 41 undefined. Keep a
+# model-specific table so generic SCS models can retain their existing entries.
+SCS215_CONTROL_TABLE = {
+    data_name: data_spec
+    for data_name, data_spec in SCS_SERIES_CONTROL_TABLE.items()
+    if data_name not in {"Return_Delay_Time", "I_Coefficient", "Acceleration"}
+}
+
 STS_SMS_SERIES_BAUDRATE_TABLE = {
     1_000_000: 0,
     500_000: 1,
@@ -181,8 +189,7 @@ MODEL_CONTROL_TABLE = {
     "sts3215": STS_SMS_SERIES_CONTROL_TABLE,
     "sts3250": STS_SMS_SERIES_CONTROL_TABLE,
     "scs0009": SCS_SERIES_CONTROL_TABLE,
-    # Feetech SCS215 uses the SCS protocol and the SCS control table.
-    "scs215": SCS_SERIES_CONTROL_TABLE,
+    "scs215": SCS215_CONTROL_TABLE,
     "sm8512bl": STS_SMS_SERIES_CONTROL_TABLE,
 }
 

@@ -24,7 +24,7 @@ import pytest
 from lerobot.motors import Motor, MotorCalibration, MotorNormMode
 from lerobot.motors.encoding_utils import encode_sign_magnitude
 from lerobot.motors.feetech import MODEL_NUMBER, MODEL_NUMBER_TABLE, FeetechMotorsBus
-from lerobot.motors.feetech.tables import STS_SMS_SERIES_CONTROL_TABLE
+from lerobot.motors.feetech.tables import MODEL_CONTROL_TABLE, STS_SMS_SERIES_CONTROL_TABLE
 
 try:
     import scservo_sdk as scs
@@ -501,6 +501,24 @@ def test_configure_motors_skips_phase_for_non_sts3215(mock_motors):
         read_data_names = [call.args[0] for call in mock_read.call_args_list]
 
     assert "Phase" not in read_data_names
+
+
+def test_scs215_control_table_excludes_undefined_registers():
+    control_table = MODEL_CONTROL_TABLE["scs215"]
+
+    assert "Return_Delay_Time" not in control_table
+    assert "I_Coefficient" not in control_table
+    assert "Acceleration" not in control_table
+
+
+def test_configure_motors_skips_undefined_scs215_registers():
+    bus = MagicMock()
+    bus.motors = {"shoulder_pan": MagicMock(model="scs215")}
+
+    FeetechMotorsBus.configure_motors(bus)
+
+    bus.write.assert_not_called()
+    bus.read.assert_not_called()
 
 
 def test_record_ranges_of_motion(mock_motors, dummy_motors):

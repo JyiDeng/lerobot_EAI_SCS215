@@ -67,7 +67,14 @@ class SOFollower(Robot):
     def _read_positions(self) -> dict[str, float]:
         """Read motor positions with the access method supported by the bus protocol."""
         # Feetech SCS protocol 1 does not support GroupSyncRead.
-        return {motor: self.bus.read("Present_Position", motor) for motor in self.bus.motors}
+        return {
+            motor: self.bus.read(
+                "Present_Position",
+                motor,
+                num_retry=self.config.num_read_retries,
+            )
+            for motor in self.bus.motors
+        }
 
     @property
     def _motors_ft(self) -> dict[str, type]:
@@ -140,17 +147,11 @@ class SOFollower(Robot):
         input(f"Move {self} to the middle of its range of motion and press ENTER....")
         homing_offsets = self.bus.set_half_turn_homings()
 
-        # Attempt to call record_ranges_of_motion with a reduced motor set when appropriate.
-        full_turn_motor = "wrist_roll"
-        unknown_range_motors = [motor for motor in self.bus.motors if motor != full_turn_motor]
         print(
-            f"Move all joints except '{full_turn_motor}' sequentially through their "
-            "entire ranges of motion.\nRecording positions. Press ENTER to stop..."
+            "Move every joint sequentially through its safe range of motion.\n"
+            "Recording positions. Press ENTER to stop..."
         )
-        range_mins, range_maxes = self.bus.record_ranges_of_motion(unknown_range_motors)
-        range_mins[full_turn_motor] = 0
-        model = self.bus.motors[full_turn_motor].model
-        range_maxes[full_turn_motor] = self.bus.model_resolution_table[model] - 1
+        range_mins, range_maxes = self.bus.record_ranges_of_motion()
 
         self.calibration = {}
         for motor, m in self.bus.motors.items():
@@ -173,7 +174,7 @@ class SOFollower(Robot):
                 if self.bus.protocol_version == 0:
                     self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
                 self.bus.write("P_Coefficient", motor, self.config.position_p_coefficient)
-                # The current SCS215 manual leaves address 23 undefined.
+                # SCS215 leaves address 23 undefined, so do not write its I coefficient.
                 if self.bus.motors[motor].model != "scs215":
                     self.bus.write("I_Coefficient", motor, self.config.position_i_coefficient)
                 self.bus.write("D_Coefficient", motor, self.config.position_d_coefficient)

@@ -177,9 +177,9 @@ SCS_SERIES_BAUDRATE_TABLE = {
     250_000: 2,
     128_000: 3,
     115_200: 4,
-    57_600: 5,
-    38_400: 6,
-    19_200: 7,
+    76_800: 5,
+    57_600: 6,
+    38_400: 7,
 }
 
 MODEL_CONTROL_TABLE = {
@@ -230,12 +230,12 @@ STS_SMS_SERIES_ENCODINGS_TABLE = {
 MODEL_ENCODING_TABLE = {
     "sts_series": STS_SMS_SERIES_ENCODINGS_TABLE,
     "sms_series": STS_SMS_SERIES_ENCODINGS_TABLE,
-    "scs_series": {},
+    "scs_series": {"Present_Load": 10},
     "sts3215": STS_SMS_SERIES_ENCODINGS_TABLE,
     "sts3250": STS_SMS_SERIES_ENCODINGS_TABLE,
     "sm8512bl": STS_SMS_SERIES_ENCODINGS_TABLE,
-    "scs0009": {},
-    "scs215": {},
+    "scs0009": {"Present_Load": 10},
+    "scs215": {"Present_Load": 10},
 }
 
 SCAN_BAUDRATES = [

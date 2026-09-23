@@ -103,6 +103,14 @@ class FeetechMotorsBus(SerialMotorsBus):
     model_resolution_table = deepcopy(MODEL_RESOLUTION)
     normalized_data = deepcopy(NORMALIZED_DATA)
 
+    @property
+    def supports_homing_offset(self) -> bool:
+        return self.protocol_version == 0
+
+    @property
+    def supports_sync_read(self) -> bool:
+        return self.protocol_version == 0
+
     def __init__(
         self,
         port: str,

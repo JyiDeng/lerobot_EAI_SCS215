@@ -350,6 +350,8 @@ class SerialMotorsBus(MotorsBusBase):
     model_number_table: dict[str, int]
     model_resolution_table: dict[str, int]
     normalized_data: list[str]
+    supports_homing_offset: bool = True
+    supports_sync_read: bool = True
 
     def __init__(
         self,
@@ -788,9 +790,7 @@ class SerialMotorsBus(MotorsBusBase):
         """
         motor_names = self._get_motors_list(motors)
 
-        # SCS protocol 1 motors do not expose Homing_Offset and do not support
-        # GroupSyncRead. Keep zero offsets and read positions one motor at a time.
-        if getattr(self, "protocol_version", 0) == 1:
+        if not self.supports_homing_offset:
             return {motor: 0 for motor in motor_names}
 
         self.reset_calibration(motor_names)
@@ -825,12 +825,12 @@ class SerialMotorsBus(MotorsBusBase):
         motor_names = self._get_motors_list(motors)
 
         def read_positions() -> dict[str, Value]:
-            if getattr(self, "protocol_version", 0) == 1:
-                return {
-                    motor: self.read("Present_Position", motor, normalize=False, num_retry=5)
-                    for motor in motor_names
-                }
-            return self.sync_read("Present_Position", motor_names, normalize=False, num_retry=5)
+            if self.supports_sync_read:
+                return self.sync_read("Present_Position", motor_names, normalize=False, num_retry=5)
+            return {
+                motor: self.read("Present_Position", motor, normalize=False, num_retry=5)
+                for motor in motor_names
+            }
 
         start_positions = read_positions()
         mins = start_positions.copy()
